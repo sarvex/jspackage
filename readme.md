@@ -28,7 +28,7 @@ Be sure to install the languages you wish to use with `npm install -g`.
   requests.
 * Compiling CoffeeScript, JavaScript, Coco, and LiveScript source files are
   included out of the box.  You can add more to the `compile.extensions` object.
-  - Or add support to the bottom of src/jspackage.coffee and submit a pull
+  - Or add support to the bottom of `src/jspackage.coffee` and submit a pull
     request.
   
 ## Command line usage
@@ -36,6 +36,7 @@ Be sure to install the languages you wish to use with `npm install -g`.
 When installed with `npm install jspackage -g`, a command line tool called
 `jspackage` will be made available.
 
+```
 Usage: jspackage input_file [output_file] [options]
 
 Available options:
@@ -45,23 +46,24 @@ Available options:
 
 If an output file is not provided, a server will be started at
 the port provided by the --port or -p option or 8080 by default.
+```
 
 ## Server example
 
 ```coffee
-  http = require 'http'
-  {compile} = require 'jspackage'
+http = require 'http'
+{compile} = require 'jspackage'
 
-  server = http.createServer (req, res) ->
-   res.writeHead(200)
-  
-   compile 'mainfile', (err, code) ->
-     if err
-       res.end 'throw unescape("' + escape(err.toString()) + '");'
-     else
-       res.end code
-  
-  server.listen(8080)
+server = http.createServer (req, res) ->
+ res.writeHead(200)
+
+ compile 'mainfile', (err, code) ->
+   if err
+     res.end 'throw unescape("' + escape(err.toString()) + '");'
+   else
+     res.end code
+
+server.listen(8080)
 ```
 
 ## Out-of-the-box supported languages
@@ -72,16 +74,16 @@ the port provided by the --port or -p option or 8080 by default.
  * Coco
 
 To add out-of-the-box support for another language, add it to the bottom of
-src/jspackage.coffee and submit a pull request.
+`src/jspackage.coffee` and submit a pull request.
 
 To add support by wrapping the code, add an entry to the `extensions`
 object:
 
 ```coffee
-  {extensions} = require 'jspackage'
-  extensions['.lua'] =
-    compile: (code) -> lua.compile(code)
-    import_re: /^--import (".+")$/gm
+{extensions} = require 'jspackage'
+extensions['.lua'] =
+  compile: (code) -> lua.compile(code)
+  import_re: /^--import (".+")$/gm
 ```
 
 ## Developing jspackage
