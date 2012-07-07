@@ -1,7 +1,7 @@
 #!/usr/local/bin/node
 
 var http = require('http'),
-    compile = require('./import'),
+    compile = require('./jspackage').compile,
     fs = require('fs'),
     optparse = require('optparse');
 

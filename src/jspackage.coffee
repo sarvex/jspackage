@@ -17,7 +17,7 @@ parseFile = (full_path, cb) ->
       if err
         cb err
         return
-      parser = parsers[path.extname(full_path)]
+      parser = extensions[path.extname(full_path)]
       try
         file.compiled_js = parser.compile(source)
       catch err
@@ -49,7 +49,7 @@ resolvePath = (import_string, doneResolvingPath) ->
           cb null, real_path
     
   # try each of the supported extensions
-  async.map [""].concat(Object.keys(parsers)), resolveWithExt, (err, results) ->
+  async.map [""].concat(Object.keys(extensions)), resolveWithExt, (err, results) ->
     async.filter results, ((item, cb) -> cb(item?)), (results) ->
       if results.length > 1
         doneResolvingPath("ambiguous import: #{import_string}")
@@ -129,7 +129,7 @@ compile = (_options, cb) ->
       output = (dep.compiled_js for dep in dependency_chain).join("\n")
       cb(null, output)
 
-compile.extensions = parsers =
+extensions =
   '.coffee':
     compile: (code) -> require('coffee-script').compile code, bare: options.bare
     import_re: /^#import (".+")$/gm
@@ -150,4 +150,4 @@ compile.extensions = parsers =
     compile: (code) -> require('LiveScript').compile code, bare: options.bare
     import_re: /^#import (".+")$/gm
 
-module.exports = compile
+module.exports = {compile, extensions}
