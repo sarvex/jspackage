@@ -14,7 +14,7 @@ var switches = [
 var parser = new optparse.OptionParser(switches);
 
 var printUsage = function() {
-    parser.banner = "Usage: import input_file [output_file] [options]"
+    parser.banner = "Usage: jspackage input_file [output_file] [options]"
     console.log(parser.toString());
     console.log('\nIf an output file is not provided, a server will be started at');
     console.log('the port provided by the --port or -p option or 8080 by default.')
