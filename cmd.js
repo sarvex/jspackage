@@ -1,13 +1,11 @@
 #!/usr/local/bin/node
 
-var http = require('http'),
-    compile = require('./jspackage').compile,
+var compile = require('./jspackage').compile,
     fs = require('fs'),
     optparse = require('optparse');
 
 var switches = [
     ['-h', '--help', "shows this help section"],
-    ['-p', '--port NUMBER', "start a server to serve the file on this port"],
     ['-b', '--bare', "compile without a top-level function wrapper"],
     ['-w', '--watch', "watch source files and recompile when any change"],
 ];
@@ -17,8 +15,6 @@ var parser = new optparse.OptionParser(switches);
 var printUsage = function() {
     parser.banner = "Usage: jspackage input_file [output_file] [options]"
     console.log(parser.toString());
-    console.log('\nIf an output file is not provided, a server will be started at');
-    console.log('the port provided by the --port or -p option or 8080 by default.')
 };
 
 parser.on('help', function() {
@@ -34,11 +30,6 @@ parser.on(0, function(arg) {
 var output;
 parser.on(1, function(arg) {
     output = arg;
-});
-
-var port;
-parser.on("port", function(name, value) {
-    port = value;
 });
 
 parser.on("bare", function() {
@@ -71,22 +62,4 @@ if (output) {
             fs.writeFile(output, code);
         }
     });
-}
-
-if (port || !output) {
-    port = port || 8080;
-    
-    http.createServer(function(req, res) {
-        res.writeHead(200);
-    
-        compile(options, function(err, code) {
-            if (err)
-                res.end('throw unescape("' + escape(err.toString()) + '");');
-            else
-                res.end(code);
-        });
-        
-    }).listen(port);
-    
-    console.log("Server listening at http://localhost:" + port);
 }

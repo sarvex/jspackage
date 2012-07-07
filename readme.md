@@ -24,12 +24,13 @@ Be sure to install the languages you wish to use with `npm install -g`.
   - In fact it is recommended to never use file extensions when importing.
 * Files will only be included once in the resulting code, regardless of how
   many times a file is imported.
-* If used as a server, only modified files will be recompiled on subsequent
-  requests.
 * Compiling CoffeeScript, JavaScript, Coco, and LiveScript source files are
-  included out of the box.  You can add more to the `compile.extensions` object.
+  included out of the box.  You can add more to the `compile.extensions`
+  object.
   - Or add support to the bottom of `src/jspackage.coffee` and submit a pull
     request.
+* Includes a --watch mode which automatically recompiles source files when
+  they change.
   
 ## Command line usage
 
@@ -40,12 +41,9 @@ When installed with `npm install jspackage -g`, a command line tool called
 Usage: jspackage input_file [output_file] [options]
 
 Available options:
-  -h, --help          shows this help section
-  -p, --port NUMBER   start a server to serve the file on this port
-  -b, --bare          compile without a top-level function wrapper
-
-If an output file is not provided, a server will be started at
-the port provided by the --port or -p option or 8080 by default.
+  -h, --help    shows this help section
+  -b, --bare    compile without a top-level function wrapper
+  -w, --watch   watch source files and recompile when any change
 ```
 
 ## Server example
