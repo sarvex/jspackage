@@ -9,6 +9,7 @@ var switches = [
     ['-h', '--help', "shows this help section"],
     ['-p', '--port NUMBER', "start a server to serve the file on this port"],
     ['-b', '--bare', "compile without a top-level function wrapper"],
+    ['-w', '--watch', "watch source files and recompile when any change"],
 ];
 
 var parser = new optparse.OptionParser(switches);
@@ -40,9 +41,12 @@ parser.on("port", function(name, value) {
     port = value;
 });
 
-var options = {};
 parser.on("bare", function() {
     options.bare = true;
+});
+
+parser.on("watch", function() {
+    options.watch = true;
 });
 
 parser.parse(process.argv.splice(2));
@@ -54,8 +58,18 @@ if (!options.mainfile) {
 
 if (output) {
     compile(options, function(err, code) {
-        if (err) throw err;
-        fs.writeFile(output, code);
+        if (options.watch) {
+            var timestamp = (new Date()).toLocaleTimeString()
+            if (err) {
+                console.error(timestamp + " - error: " + err);
+            } else {
+                console.info(timestamp + " - generated " + output);
+                fs.writeFile(output, code);
+            }
+        } else {
+            if (err) throw err;
+            fs.writeFile(output, code);
+        }
     });
 }
 

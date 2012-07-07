@@ -2,6 +2,11 @@ fs = require('fs')
 path = require('path')
 async = require('async')
 
+
+cached_files = {}
+root = null
+options = null
+
 parseFile = (full_path, cb) ->
   file =
     path: full_path
@@ -21,8 +26,11 @@ parseFile = (full_path, cb) ->
       try
         file.compiled_js = parser.compile(source)
       catch err
-        cb "#{full_path}\n#{err}"
+        cb "#{full_path}\n#{err}", file
         return
+      if options.watch
+        timestamp = (new Date()).toLocaleTimeString()
+        console.info "#{timestamp} - compiled #{file.path}"
       # get the list of dependencies
       re = parser.import_re
       re.lastIndex = 0
@@ -51,14 +59,13 @@ resolvePath = (import_string, doneResolvingPath) ->
   # try each of the supported extensions
   async.map [""].concat(Object.keys(extensions)), resolveWithExt, (err, results) ->
     async.filter results, ((item, cb) -> cb(item?)), (results) ->
-      if results.length > 1
+      if results.length is 1
+        doneResolvingPath null, results[0]
+      else if results.length is 0
+        doneResolvingPath("unable to resolve import: #{import_string}")
+      else if results.length > 1
         doneResolvingPath("ambiguous import: #{import_string}")
-        return
-      doneResolvingPath null, results[0]
-
-cached_files = {}
-root = null
-options = null
+      return
 
 resolveDependencyChain = (root, doneResolvingDependencyChain) ->
   deps = []
@@ -92,14 +99,16 @@ collectDependencies = (import_string, doneCollectingDependencies) ->
 
     parseAndHandleErr = (cb) ->
       parseFile canonical_path, (err, file) ->
+        if file
+          cached_files[file.path] = file
+          root ?= file
+
         if err
           doneCollectingDependencies(err)
-          return
+        else
+          cb(file)
 
-        root ?= file
-
-        cached_files[file.path] = file
-        cb(file)
+        return
 
     callNext = (file) ->
       async.map file.deps, collectDependencies, doneCollectingDependencies
@@ -115,19 +124,48 @@ collectDependencies = (import_string, doneCollectingDependencies) ->
       parseAndHandleErr callNext
 
 
+# emulates fs.watch
+watchFileFallback = (filename, options, cb) ->
+  options.interval = 701
+  fs.watchFile filename, options, (curr, prev) ->
+    if curr.mtime isnt prev.mtime
+      cb "change", filename
+  return {close: -> fs.unwatchFile(filename)}
+
+watchFile = fs.watch or watchFileFallback
+
+watchFiles = (files, cb) ->
+  watchers = []
+  doCallback = (event) ->
+    if event is "change"
+      watcher.close() for watcher in watchers
+      cb()
+  for file in files
+    try
+      watcher = fs.watch(file, doCallback)
+    catch err
+      watcher = watchFileFallback(file, doCallback)
+    watchers.push watcher
+
 compile = (_options, cb) ->
   options = _options
   root = null
-  collectDependencies options.mainfile, (err) ->
-    if err
-      cb(err)
+  collectDependencies options.mainfile, (collect_err) ->
+    if collect_err and not root?
+      cb(collect_err)
       return
     resolveDependencyChain root, (err, dependency_chain) ->
+      if _options.watch
+        watchFiles (dep.path for dep in dependency_chain), ->
+          compile _options, cb
       if err
         cb(err)
-        return
-      output = (dep.compiled_js for dep in dependency_chain).join("\n")
-      cb(null, output)
+      else if collect_err
+        cb(collect_err)
+      else
+        output = (dep.compiled_js for dep in dependency_chain).join("\n")
+        cb(null, output)
+      return
 
 extensions =
   '.coffee':
