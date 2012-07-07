@@ -55,11 +55,11 @@ http = require 'http'
 server = http.createServer (req, res) ->
  res.writeHead(200)
 
- compile 'mainfile', (err, code) ->
+ compile 'mainfile', (err, compiled_code) ->
    if err
      res.end 'throw unescape("' + escape(err.toString()) + '");'
    else
-     res.end code
+     res.end compiled_code
 
 server.listen(8080)
 ```
