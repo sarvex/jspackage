@@ -6,12 +6,13 @@ switches = [
   ['-h', '--help', "shows this help section"]
   ['-b', '--bare', "compile without a top-level function wrapper"]
   ['-w', '--watch', "watch source files and recompile when any change"]
+  ['-l', '--lib PATH', "add an additional search directory for source files"]
 ]
 
 parser = new optparse.OptionParser(switches)
 
 printUsage = ->
-  parser.banner = "Usage: jspackage input_file [output_file] [options]"
+  parser.banner = "Usage: jspackage input_file output_file [options]"
   console.log(parser.toString())
 
 parser.on 'help', ->
@@ -32,21 +33,23 @@ parser.on "bare", ->
 parser.on "watch", ->
   options.watch = true
 
+parser.on "lib", (name, value) ->
+  (options.libs ?= []).push value
+
 parser.parse(process.argv.splice(2))
 
-if not options.mainfile
+if not options.mainfile or not output
   printUsage()
   process.exit(1)
 
-if output
-  compile options, (err, code) ->
-    if options.watch
-      timestamp = (new Date()).toLocaleTimeString()
-      if err
-        console.error("#{timestamp}  - error: #{err}")
-      else
-        console.info("#{timestamp} - generated #{output}")
-        fs.writeFile(output, code)
+compile options, (err, code) ->
+  if options.watch
+    timestamp = (new Date()).toLocaleTimeString()
+    if err
+      console.error("#{timestamp}  - error: #{err}")
     else
-      if (err) then throw err
+      console.info("#{timestamp} - generated #{output}")
       fs.writeFile(output, code)
+  else
+    if (err) then throw err
+    fs.writeFile(output, code)

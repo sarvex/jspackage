@@ -36,42 +36,47 @@ parseFile = (full_path, cb) ->
       re.lastIndex = 0
       while result = re.exec(source)
         import_string = result[1].slice(1, -1)
-        # relative dependencies should default to the
-        # same directory as the parent
-        if import_string[0] isnt '/'
-          import_string = path.join(path.dirname(full_path), import_string)
         file.deps.push import_string
       cb null, file
 
 
-resolvePath = (import_string, doneResolvingPath) ->
-  resolveWithExt = (ext, cb) ->
-    fs.realpath path.resolve(import_string + ext), (err, real_path) ->
-      if err
-        cb null, null
-        return
-      fs.stat real_path, (err, stat) ->
-        if err or stat.isDirectory()
-          cb null, null
-        else
-          cb null, real_path
-    
+resolveImport = (cwd, import_string, doneResolvingImport) ->
   # try each of the supported extensions
-  async.map [""].concat(Object.keys(extensions)), resolveWithExt, (err, results) ->
-    async.filter results, ((item, cb) -> cb(item?)), (results) ->
-      if results.length is 1
-        doneResolvingPath null, results[0]
-      else if results.length is 0
-        doneResolvingPath("unable to resolve import: #{import_string}")
-      else if results.length > 1
-        doneResolvingPath("ambiguous import: #{import_string}")
-      return
-
+  try_exts = [""].concat(Object.keys(extensions))
+  # try each of the libs, but stop upon first success
+  lib_index = 0
+  tryNextLib = ->
+    if (try_lib = libs[lib_index++])?
+      resolveWithExt = (ext, cb) ->
+        resolved_path = path.resolve(cwd, try_lib, import_string + ext)
+        fs.realpath resolved_path, (err, real_path) ->
+          if err
+            cb null, null
+            return
+          fs.stat real_path, (err, stat) ->
+            if err or stat.isDirectory()
+              cb null, null
+            else
+              cb null, real_path
+      async.map try_exts, resolveWithExt, (err, results) ->
+        async.filter results, ((item, cb) -> cb(item?)), (results) ->
+          if results.length is 1
+            doneResolvingImport null, results[0]
+          else if results.length is 0
+            tryNextLib()
+          else if results.length > 1
+            doneResolvingImport("ambiguous import: #{import_string}")
+          return
+    else
+      doneResolvingImport("unable to resolve import: #{import_string}")
+  tryNextLib()
+  
 resolveDependencyChain = (root, doneResolvingDependencyChain) ->
   deps = []
   seen = {}
   processNode = (node, doneProcessingNode) ->
-    async.map node.deps, resolvePath, (err, resolved_deps) ->
+    resolveFromDep = (dep, cb) -> resolveImport(path.dirname(node.path), dep, cb)
+    async.map node.deps, resolveFromDep, (err, resolved_deps) ->
       if err
         doneResolvingDependencyChain err
         return
@@ -91,8 +96,8 @@ resolveDependencyChain = (root, doneResolvingDependencyChain) ->
   processNode root, ->
     doneResolvingDependencyChain null, deps
 
-collectDependencies = (import_string, doneCollectingDependencies) ->
-  resolvePath import_string, (err, canonical_path) ->
+collectDependencies = (cwd, import_string, doneCollectingDependencies) ->
+  resolveImport cwd, import_string, (err, canonical_path) ->
     if err
       doneCollectingDependencies(err)
       return
@@ -111,7 +116,9 @@ collectDependencies = (import_string, doneCollectingDependencies) ->
         return
 
     callNext = (file) ->
-      async.map file.deps, collectDependencies, doneCollectingDependencies
+      collectFromFile = (dep, cb) ->
+        collectDependencies(path.dirname(file.path), dep, cb)
+      async.map file.deps, collectFromFile, doneCollectingDependencies
 
     if (cached_file = cached_files[canonical_path])?
       fs.stat canonical_path, (err, stat) ->
@@ -147,10 +154,16 @@ watchFiles = (files, cb) ->
       watcher = watchFileFallback(file, doCallback)
     watchers.push watcher
 
+libs = null
 compile = (_options, cb) ->
   options = _options
+
+  libs = options.libs ? []
+  libs = (path.resolve(lib) for lib in libs)
+  libs.unshift "."
+
   root = null
-  collectDependencies options.mainfile, (collect_err) ->
+  collectDependencies process.cwd(), options.mainfile, (collect_err) ->
     if collect_err and not root?
       cb(collect_err)
       return

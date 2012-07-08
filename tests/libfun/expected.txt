@@ -1,0 +1,6 @@
+./path3/derp/hurr
+./path3/joy
+./path2/electric
+./path1/robin
+./thing
+main
