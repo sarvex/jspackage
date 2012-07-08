@@ -88,7 +88,7 @@ extensions['.lua'] =
 
 To compile and watch:
 
-    coffee -wco . src/
+    coffee -wbco . src/
 
 To run the tests:
 

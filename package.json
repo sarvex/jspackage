@@ -28,7 +28,7 @@
       "node": "~0.8.0"
   },
   "bin": {
-      "jspackage": "./cmd.js"
+      "jspackage": "./cmd_wrapper.js"
   },
   "main": "jspackage.js"
 }
