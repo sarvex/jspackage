@@ -1,5 +1,5 @@
-Client side build tool with dependency management
-=================================================
+Build tool to bundle client side code with an import syntax
+===========================================================
 
 Ever wanted to have an `#import` statement in your favorite language which
 compiles into JavaScript that works like `#include` in other languages?
@@ -19,8 +19,8 @@ Be sure to install the languages you wish to use with `npm install -g`.
 
 ## Features
 
-* File extensions are automatically resolved. Do not include file extensions
-  in your import statements.
+* File extensions are automatically resolved, and in fact are not allowed in
+  import statements. This goes for the input_file too.
 * Files will only be included once in the resulting code, regardless of how
   many times a file is imported.
 * Compiling CoffeeScript, JavaScript, Coco, and LiveScript source files are
@@ -28,9 +28,9 @@ Be sure to install the languages you wish to use with `npm install -g`.
   object.
   - Or add support to the bottom of `src/jspackage.coffee` and submit a pull
     request.
-* Includes a --watch mode which automatically recompiles source files when
+* Includes a `--watch` mode which automatically recompiles source files when
   they change.
-* Ability to supply more source code search paths with --lib.
+* Ability to supply more source code search paths with `--lib`.
   
 ## Command line usage
 
