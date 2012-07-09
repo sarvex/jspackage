@@ -20,7 +20,7 @@ fs.readdir tests_dir, (err, files) ->
         fs.readFile switches_file, 'utf8', (err, switches) ->
           switches = (switches || "").replace(/\n/g, " ")
           temp.open "", (err, tmp_js_file) ->
-            cmdline = "node ./cmd.js #{switches} #{main_file} #{tmp_js_file.path}"
+            cmdline = "bin/jspackage #{switches} #{main_file} #{tmp_js_file.path}"
             exec cmdline, (err, stdout, stderr) ->
               if stderr.length > 0
                 exec_result =

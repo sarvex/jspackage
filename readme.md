@@ -19,9 +19,8 @@ Be sure to install the languages you wish to use with `npm install -g`.
 
 ## Features
 
-* File extensions are optional and will be automatically resolved if not
-  included.
-  - In fact it is recommended to never use file extensions when importing.
+* File extensions are automatically resolved. Do not include file extensions
+  in your import statements.
 * Files will only be included once in the resulting code, regardless of how
   many times a file is imported.
 * Compiling CoffeeScript, JavaScript, Coco, and LiveScript source files are
@@ -31,6 +30,7 @@ Be sure to install the languages you wish to use with `npm install -g`.
     request.
 * Includes a --watch mode which automatically recompiles source files when
   they change.
+* Ability to supply more source code search paths with --lib.
   
 ## Command line usage
 

@@ -35,7 +35,7 @@ fs.readdir(tests_dir, function(err, files) {
           switches = (switches || "").replace(/\n/g, " ");
           return temp.open("", function(err, tmp_js_file) {
             var cmdline;
-            cmdline = "node ./cmd.js " + switches + " " + main_file + " " + tmp_js_file.path;
+            cmdline = "bin/jspackage " + switches + " " + main_file + " " + tmp_js_file.path;
             return exec(cmdline, function(err, stdout, stderr) {
               if (stderr.length > 0) {
                 exec_result = {

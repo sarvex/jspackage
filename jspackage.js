@@ -57,7 +57,7 @@ parseFile = function(full_path, cb) {
 
 resolveImport = function(cwd, import_string, doneResolvingImport) {
   var lib_index, tryNextLib, try_exts;
-  try_exts = [""].concat(Object.keys(extensions));
+  try_exts = Object.keys(extensions);
   lib_index = 0;
   tryNextLib = function() {
     var resolveWithExt, try_lib;

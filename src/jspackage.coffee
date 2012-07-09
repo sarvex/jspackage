@@ -42,7 +42,7 @@ parseFile = (full_path, cb) ->
 
 resolveImport = (cwd, import_string, doneResolvingImport) ->
   # try each of the supported extensions
-  try_exts = [""].concat(Object.keys(extensions))
+  try_exts = Object.keys(extensions)
   # try each of the libs, but stop upon first success
   lib_index = 0
   tryNextLib = ->
