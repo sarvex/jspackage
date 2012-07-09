@@ -54,14 +54,14 @@ http = require 'http'
 {compile} = require 'jspackage'
 
 server = http.createServer (req, res) ->
- res.writeHead(200)
-
- compile 'mainfile', (err, compiled_code) ->
-   if err
-     res.end 'throw unescape("' + escape(err.toString()) + '");'
-   else
-     res.end compiled_code
-
+  res.writeHead(200)
+ 
+  compile {mainfile}, (err, compiled_code) ->
+    if err
+      res.end 'throw unescape("' + escape(err.toString()) + '");'
+    else
+      res.end compiled_code
+ 
 server.listen(8080)
 ```
 
