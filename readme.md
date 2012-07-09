@@ -38,12 +38,13 @@ When installed with `npm install jspackage -g`, a command line tool called
 `jspackage` will be made available.
 
 ```
-Usage: jspackage input_file [output_file] [options]
+Usage: jspackage input_file output_file [options]
 
 Available options:
-  -h, --help    shows this help section
-  -b, --bare    compile without a top-level function wrapper
-  -w, --watch   watch source files and recompile when any change
+  -h, --help       shows this help section
+  -b, --bare       compile without a top-level function wrapper
+  -w, --watch      watch source files and recompile when any change
+  -l, --lib PATH   add an additional search directory for source files
 ```
 
 ## Server example
