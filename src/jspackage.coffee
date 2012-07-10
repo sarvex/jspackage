@@ -2,9 +2,13 @@ fs = require('fs')
 path = require('path')
 async = require('async')
 
+# persisted between calls to compile
 cached_files = {}
+watching = null
+
+# reset every time compile is called
+libs = null
 root = null
-options = null
 
 parseFile = (resolved_dep, cb) ->
   file =
@@ -28,7 +32,7 @@ parseFile = (resolved_dep, cb) ->
       catch err
         cb "#{resolved_dep.path}\n#{err}", file
         return
-      if options.watch
+      if watching
         timestamp = (new Date()).toLocaleTimeString()
         console.info "#{timestamp} - compiled #{file.path}"
       # get the list of dependencies
@@ -37,7 +41,8 @@ parseFile = (resolved_dep, cb) ->
       while result = re.exec(source)
         depend = result[1]
         options = {bare: result[2]?}
-        file.deps.push {depend, options, cwd: file.cwd}
+        seen = resolved_dep.seen.concat(file.path)
+        file.deps.push {depend, options, cwd: file.cwd, seen}
       cb null, file
 
 
@@ -62,7 +67,10 @@ resolveDepend = (dep, doneResolvingDepend) ->
       async.map try_exts, resolveWithExt, (err, results) ->
         async.filter results, ((item, cb) -> cb(item?)), (results) ->
           if results.length is 1
-            doneResolvingDepend null, {path: results[0], options: dep.options}
+            doneResolvingDepend null,
+              path: results[0]
+              options: dep.options
+              seen: dep.seen
           else if results.length is 0
             tryNextLib()
           else if results.length > 1
@@ -100,6 +108,11 @@ collectDependencies = (dep, doneCollectingDependencies) ->
   resolveDepend dep, (err, resolved_dep) ->
     if err
       doneCollectingDependencies(err)
+      return
+
+    if resolved_dep.path in dep.seen
+      dep_chain = dep.seen.concat(resolved_dep.path).join(" depends on\n")
+      doneCollectingDependencies "circular dependency:\n#{dep_chain}"
       return
 
     parseAndHandleErr = (cb) ->
@@ -152,9 +165,8 @@ watchFiles = (files, cb) ->
       watcher = watchFileFallback(file, doCallback)
     watchers.push watcher
 
-libs = null
-compile = (_options, cb) ->
-  options = _options
+compile = (options, cb) ->
+  watching = options.watch
 
   libs = options.libs ? []
   libs = (path.resolve(lib) for lib in libs)
@@ -166,12 +178,13 @@ compile = (_options, cb) ->
     options:
       bare: options.bare
     cwd: process.cwd()
+    seen: []
   collectDependencies dep, (collect_err) ->
     if collect_err and not root?
       cb(collect_err)
       return
     resolveDependencyChain root, (err, dependency_chain) ->
-      if _options.watch
+      if watching
         watchFiles (dep.path for dep in dependency_chain), ->
           compile _options, cb
       if err
