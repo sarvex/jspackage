@@ -13,31 +13,31 @@ root = null;
 
 options = null;
 
-parseFile = function(full_path, cb) {
+parseFile = function(resolved_dep, cb) {
   var file;
   file = {
-    path: full_path,
+    path: resolved_dep.path,
     compiled_js: null,
     mtime: null,
     deps: []
   };
-  return fs.stat(full_path, function(err, stat) {
+  return fs.stat(resolved_dep.path, function(err, stat) {
     if (err) {
       cb(err);
       return;
     }
     file.mtime = +stat.mtime;
-    return fs.readFile(full_path, 'utf8', function(err, source) {
-      var depend_string, parser, re, result, timestamp;
+    return fs.readFile(resolved_dep.path, 'utf8', function(err, source) {
+      var depend, parser, re, result, timestamp;
       if (err) {
         cb(err);
         return;
       }
-      parser = extensions[path.extname(full_path)];
+      parser = extensions[path.extname(resolved_dep.path)];
       try {
-        file.compiled_js = parser.compile(source);
+        file.compiled_js = parser.compile(source, resolved_dep.options);
       } catch (err) {
-        cb("" + full_path + "\n" + err, file);
+        cb("" + resolved_dep.path + "\n" + err, file);
         return;
       }
       if (options.watch) {
@@ -47,15 +47,21 @@ parseFile = function(full_path, cb) {
       re = parser.depend_re;
       re.lastIndex = 0;
       while (result = re.exec(source)) {
-        depend_string = result[1].slice(1, -1);
-        file.deps.push(depend_string);
+        depend = result[1];
+        options = {
+          bare: result[2] != null
+        };
+        file.deps.push({
+          depend: depend,
+          options: options
+        });
       }
       return cb(null, file);
     });
   });
 };
 
-resolveDepend = function(cwd, depend_string, doneResolvingDepend) {
+resolveDepend = function(cwd, dep, doneResolvingDepend) {
   var lib_index, tryNextLib, try_exts;
   try_exts = Object.keys(extensions);
   lib_index = 0;
@@ -64,7 +70,7 @@ resolveDepend = function(cwd, depend_string, doneResolvingDepend) {
     if ((try_lib = libs[lib_index++]) != null) {
       resolveWithExt = function(ext, cb) {
         var resolved_path;
-        resolved_path = path.resolve(cwd, try_lib, depend_string + ext);
+        resolved_path = path.resolve(cwd, try_lib, dep.depend + ext);
         return fs.realpath(resolved_path, function(err, real_path) {
           if (err) {
             cb(null, null);
@@ -84,24 +90,27 @@ resolveDepend = function(cwd, depend_string, doneResolvingDepend) {
           return cb(item != null);
         }), function(results) {
           if (results.length === 1) {
-            doneResolvingDepend(null, results[0]);
+            doneResolvingDepend(null, {
+              path: results[0],
+              options: dep.options
+            });
           } else if (results.length === 0) {
             tryNextLib();
           } else if (results.length > 1) {
-            doneResolvingDepend("ambiguous dependency: " + depend_string);
+            doneResolvingDepend("ambiguous dependency: " + dep.depend);
           }
         });
       });
     } else {
-      return doneResolvingDepend("unable to resolve dependency: " + depend_string);
+      return doneResolvingDepend("unable to resolve dependency: " + dep.depend);
     }
   };
   return tryNextLib();
 };
 
 resolveDependencyChain = function(root, doneResolvingDependencyChain) {
-  var deps, processNode, seen;
-  deps = [];
+  var files, processNode, seen;
+  files = [];
   seen = {};
   processNode = function(node, doneProcessingNode) {
     var resolveFromDep;
@@ -109,45 +118,45 @@ resolveDependencyChain = function(root, doneResolvingDependencyChain) {
       return resolveDepend(path.dirname(node.path), dep, cb);
     };
     return async.map(node.deps, resolveFromDep, function(err, resolved_deps) {
-      var dep, dep_path, funcs, _i, _len;
+      var dep, file, funcs, _i, _len;
       if (err) {
         doneResolvingDependencyChain(err);
         return;
       }
       funcs = [];
       for (_i = 0, _len = resolved_deps.length; _i < _len; _i++) {
-        dep_path = resolved_deps[_i];
-        dep = cached_files[dep_path];
-        if (seen[dep.path] != null) {
+        dep = resolved_deps[_i];
+        file = cached_files[dep.path];
+        if (seen[file.path] != null) {
           continue;
         }
-        seen[dep.path] = true;
-        funcs.push(async.apply(processNode, dep));
+        seen[file.path] = true;
+        funcs.push(async.apply(processNode, file));
       }
       return async.parallel(funcs, function(err, results) {
         if (err) {
           doneResolvingDependencyChain(err);
           return;
         }
-        deps.push(node);
+        files.push(node);
         return doneProcessingNode();
       });
     });
   };
   return processNode(root, function() {
-    return doneResolvingDependencyChain(null, deps);
+    return doneResolvingDependencyChain(null, files);
   });
 };
 
-collectDependencies = function(cwd, depend_string, doneCollectingDependencies) {
-  return resolveDepend(cwd, depend_string, function(err, canonical_path) {
+collectDependencies = function(cwd, dep, doneCollectingDependencies) {
+  return resolveDepend(cwd, dep, function(err, resolved_dep) {
     var cached_file, callNext, parseAndHandleErr;
     if (err) {
       doneCollectingDependencies(err);
       return;
     }
     parseAndHandleErr = function(cb) {
-      return parseFile(canonical_path, function(err, file) {
+      return parseFile(resolved_dep, function(err, file) {
         if (file) {
           cached_files[file.path] = file;
           if (root == null) {
@@ -168,8 +177,8 @@ collectDependencies = function(cwd, depend_string, doneCollectingDependencies) {
       };
       return async.map(file.deps, collectFromFile, doneCollectingDependencies);
     };
-    if ((cached_file = cached_files[canonical_path]) != null) {
-      return fs.stat(canonical_path, function(err, stat) {
+    if ((cached_file = cached_files[resolved_dep.path]) != null) {
+      return fs.stat(resolved_dep.path, function(err, stat) {
         if (cached_file.mtime === +stat.mtime) {
           if (root == null) {
             root = cached_file;
@@ -230,7 +239,7 @@ watchFiles = function(files, cb) {
 libs = null;
 
 compile = function(_options, cb) {
-  var lib, _ref;
+  var dep, lib, _ref;
   options = _options;
   libs = (_ref = options.libs) != null ? _ref : [];
   libs = (function() {
@@ -244,13 +253,19 @@ compile = function(_options, cb) {
   })();
   libs.unshift(".");
   root = null;
-  return collectDependencies(process.cwd(), options.mainfile, function(collect_err) {
+  dep = {
+    depend: options.mainfile,
+    options: {
+      bare: options.bare
+    }
+  };
+  return collectDependencies(process.cwd(), dep, function(collect_err) {
     if (collect_err && !(root != null)) {
       cb(collect_err);
       return;
     }
     return resolveDependencyChain(root, function(err, dependency_chain) {
-      var dep, output;
+      var output;
       if (_options.watch) {
         watchFiles((function() {
           var _i, _len, _results;
@@ -286,38 +301,38 @@ compile = function(_options, cb) {
 
 extensions = {
   '.coffee': {
-    compile: function(code) {
+    compile: function(code, options) {
       return require('coffee-script').compile(code, {
         bare: options.bare
       });
     },
-    depend_re: /^#depend (".+")$/gm
+    depend_re: /^#depend "(.+)"( bare)?$/gm
   },
   '.js': {
-    compile: function(code) {
+    compile: function(code, options) {
       if (options.bare) {
         return code;
       } else {
         return "(function(){\n" + code + "}).call(this);";
       }
     },
-    depend_re: /^\/\/depend (".+");?$/gm
+    depend_re: /^\/\/depend "(.+)"( bare)?;?$/gm
   },
   '.co': {
-    compile: function(code) {
+    compile: function(code, options) {
       return require('coco').compile(code, {
         bare: options.bare
       });
     },
-    depend_re: /^#depend (".+")$/gm
+    depend_re: /^#depend "(.+)"( bare)?$/gm
   },
   '.ls': {
-    compile: function(code) {
+    compile: function(code, options) {
       return require('LiveScript').compile(code, {
         bare: options.bare
       });
     },
-    depend_re: /^#depend (".+")$/gm
+    depend_re: /^#depend "(.+)"( bare)?$/gm
   }
 };
 

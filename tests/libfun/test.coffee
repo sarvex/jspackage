@@ -1,4 +1,4 @@
-#depend "thing"
+#depend "thing" bare
 
 
 console.log "main"

@@ -1,5 +1,5 @@
-//depend "two"
-//depend "three"
+//depend "two" bare
+//depend "three" bare
 
 var One;
 

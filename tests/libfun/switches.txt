@@ -1,4 +1,3 @@
--b
 --lib tests/libfun/path1
 --lib tests/libfun/path2
 --lib tests/libfun/path3

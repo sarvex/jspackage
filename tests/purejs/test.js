@@ -1,4 +1,4 @@
-//depend "one"
+//depend "one" bare
 
-console.log("main module")
+console.log("main module");
 One();

@@ -2,31 +2,30 @@ fs = require('fs')
 path = require('path')
 async = require('async')
 
-
 cached_files = {}
 root = null
 options = null
 
-parseFile = (full_path, cb) ->
+parseFile = (resolved_dep, cb) ->
   file =
-    path: full_path
+    path: resolved_dep.path
     compiled_js: null
     mtime: null
     deps: []
-  fs.stat full_path, (err, stat) ->
+  fs.stat resolved_dep.path, (err, stat) ->
     if err
       cb err
       return
     file.mtime = +stat.mtime
-    fs.readFile full_path, 'utf8', (err, source) ->
+    fs.readFile resolved_dep.path, 'utf8', (err, source) ->
       if err
         cb err
         return
-      parser = extensions[path.extname(full_path)]
+      parser = extensions[path.extname(resolved_dep.path)]
       try
-        file.compiled_js = parser.compile(source)
+        file.compiled_js = parser.compile(source, resolved_dep.options)
       catch err
-        cb "#{full_path}\n#{err}", file
+        cb "#{resolved_dep.path}\n#{err}", file
         return
       if options.watch
         timestamp = (new Date()).toLocaleTimeString()
@@ -35,12 +34,13 @@ parseFile = (full_path, cb) ->
       re = parser.depend_re
       re.lastIndex = 0
       while result = re.exec(source)
-        depend_string = result[1].slice(1, -1)
-        file.deps.push depend_string
+        depend = result[1]
+        options = {bare: result[2]?}
+        file.deps.push {depend, options}
       cb null, file
 
 
-resolveDepend = (cwd, depend_string, doneResolvingDepend) ->
+resolveDepend = (cwd, dep, doneResolvingDepend) ->
   # try each of the supported extensions
   try_exts = Object.keys(extensions)
   # try each of the libs, but stop upon first success
@@ -48,7 +48,7 @@ resolveDepend = (cwd, depend_string, doneResolvingDepend) ->
   tryNextLib = ->
     if (try_lib = libs[lib_index++])?
       resolveWithExt = (ext, cb) ->
-        resolved_path = path.resolve(cwd, try_lib, depend_string + ext)
+        resolved_path = path.resolve(cwd, try_lib, dep.depend + ext)
         fs.realpath resolved_path, (err, real_path) ->
           if err
             cb null, null
@@ -61,49 +61,50 @@ resolveDepend = (cwd, depend_string, doneResolvingDepend) ->
       async.map try_exts, resolveWithExt, (err, results) ->
         async.filter results, ((item, cb) -> cb(item?)), (results) ->
           if results.length is 1
-            doneResolvingDepend null, results[0]
+            doneResolvingDepend null, {path: results[0], options: dep.options}
           else if results.length is 0
             tryNextLib()
           else if results.length > 1
-            doneResolvingDepend("ambiguous dependency: #{depend_string}")
+            doneResolvingDepend("ambiguous dependency: #{dep.depend}")
           return
     else
-      doneResolvingDepend("unable to resolve dependency: #{depend_string}")
+      doneResolvingDepend("unable to resolve dependency: #{dep.depend}")
   tryNextLib()
   
 resolveDependencyChain = (root, doneResolvingDependencyChain) ->
-  deps = []
+  files = []
   seen = {}
   processNode = (node, doneProcessingNode) ->
-    resolveFromDep = (dep, cb) -> resolveDepend(path.dirname(node.path), dep, cb)
+    resolveFromDep = (dep, cb) ->
+      resolveDepend(path.dirname(node.path), dep, cb)
     async.map node.deps, resolveFromDep, (err, resolved_deps) ->
       if err
         doneResolvingDependencyChain err
         return
       funcs = []
-      for dep_path in resolved_deps
-        dep = cached_files[dep_path]
-        if seen[dep.path]?
+      for dep in resolved_deps
+        file = cached_files[dep.path]
+        if seen[file.path]?
           continue
-        seen[dep.path] = true
-        funcs.push async.apply(processNode, dep)
+        seen[file.path] = true
+        funcs.push async.apply(processNode, file)
       async.parallel funcs, (err, results) ->
         if err
           doneResolvingDependencyChain err
           return
-        deps.push node
+        files.push node
         doneProcessingNode()
   processNode root, ->
-    doneResolvingDependencyChain null, deps
+    doneResolvingDependencyChain null, files
 
-collectDependencies = (cwd, depend_string, doneCollectingDependencies) ->
-  resolveDepend cwd, depend_string, (err, canonical_path) ->
+collectDependencies = (cwd, dep, doneCollectingDependencies) ->
+  resolveDepend cwd, dep, (err, resolved_dep) ->
     if err
       doneCollectingDependencies(err)
       return
 
     parseAndHandleErr = (cb) ->
-      parseFile canonical_path, (err, file) ->
+      parseFile resolved_dep, (err, file) ->
         if file
           cached_files[file.path] = file
           root ?= file
@@ -120,8 +121,8 @@ collectDependencies = (cwd, depend_string, doneCollectingDependencies) ->
         collectDependencies(path.dirname(file.path), dep, cb)
       async.map file.deps, collectFromFile, doneCollectingDependencies
 
-    if (cached_file = cached_files[canonical_path])?
-      fs.stat canonical_path, (err, stat) ->
+    if (cached_file = cached_files[resolved_dep.path])?
+      fs.stat resolved_dep.path, (err, stat) ->
         if cached_file.mtime is +stat.mtime
           root ?= cached_file
           callNext cached_file
@@ -163,7 +164,11 @@ compile = (_options, cb) ->
   libs.unshift "."
 
   root = null
-  collectDependencies process.cwd(), options.mainfile, (collect_err) ->
+  dep =
+    depend: options.mainfile
+    options:
+      bare: options.bare
+  collectDependencies process.cwd(), dep, (collect_err) ->
     if collect_err and not root?
       cb(collect_err)
       return
@@ -182,23 +187,26 @@ compile = (_options, cb) ->
 
 extensions =
   '.coffee':
-    compile: (code) -> require('coffee-script').compile code, bare: options.bare
-    depend_re: /^#depend (".+")$/gm
+    compile: (code, options) ->
+      require('coffee-script').compile code, bare: options.bare
+    depend_re: /^#depend "(.+)"( bare)?$/gm
 
   '.js':
-    compile: (code) ->
+    compile: (code, options) ->
       if options.bare
         code
       else
         "(function(){\n#{code}}).call(this);"
-    depend_re: /^\/\/depend (".+");?$/gm
+    depend_re: /^\/\/depend "(.+)"( bare)?;?$/gm
 
   '.co':
-    compile: (code) -> require('coco').compile code, bare: options.bare
-    depend_re: /^#depend (".+")$/gm
+    compile: (code, options) ->
+      require('coco').compile code, bare: options.bare
+    depend_re: /^#depend "(.+)"( bare)?$/gm
 
   '.ls':
-    compile: (code) -> require('LiveScript').compile code, bare: options.bare
-    depend_re: /^#depend (".+")$/gm
+    compile: (code, options) ->
+      require('LiveScript').compile code, bare: options.bare
+    depend_re: /^#depend "(.+)"( bare)?$/gm
 
 module.exports = {compile, extensions}
