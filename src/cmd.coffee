@@ -43,10 +43,10 @@ if not options.mainfile or not output
   printUsage()
   process.exit(1)
 
+# allow the user to specify the first song without an extension
 if (ext = path.extname(options.mainfile)).length > 0
   without_ext = options.mainfile.substring(0, options.mainfile.length - ext.length)
-  console.error "Warning: don't include the file extension for input_file."
-  console.error "Did you mean this? #{without_ext}"
+  options.mainfile = without_ext
 
 compile options, (err, code) ->
   if options.watch
