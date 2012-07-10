@@ -186,7 +186,7 @@ compile = (options, cb) ->
     resolveDependencyChain root, (err, dependency_chain) ->
       if watching
         watchFiles (dep.path for dep in dependency_chain), ->
-          compile _options, cb
+          compile options, cb
       if err
         cb(err)
       else if collect_err

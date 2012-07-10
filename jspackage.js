@@ -281,7 +281,7 @@ compile = function(options, cb) {
           }
           return _results;
         })(), function() {
-          return compile(_options, cb);
+          return compile(options, cb);
         });
       }
       if (err) {
