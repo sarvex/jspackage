@@ -1,4 +1,4 @@
-#import "acoffeefile"
+#depend "acoffeefile"
 
 x = "hi from"
 y = "shittt"

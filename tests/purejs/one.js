@@ -1,5 +1,5 @@
-//import "two"
-//import "three"
+//depend "two"
+//depend "three"
 
 var One;
 

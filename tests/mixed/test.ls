@@ -1,4 +1,4 @@
-#import "acocofile"
+#depend "acocofile"
 
 downcase = -> it.=toLowerCase!
 

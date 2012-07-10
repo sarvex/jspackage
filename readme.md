@@ -1,28 +1,30 @@
-Build tool to bundle client side code with an import syntax
-===========================================================
+Bundle client side code with inline dependency declaration syntax
+=================================================================
 
-Ever wanted to have an `#import` statement in your favorite language which
-compiles into JavaScript that works like `#include` in other languages?
-Well now you have one! Importing files and concatenating them in the right
-place is now as easy as:
+## Synopsis
 
-    #import "some_js_file"
-    #import "another_one"
-    #import "even_coco_is_supported"
-    #import "and_livescript"
+    # in your source code, declare the files you depend on:
     
-    # some code using the imported files here...
+    #depend "some_js_file"
+    #depend "or_some_coffee_file"
+    #depend "even_coco_is_supported"
+    #depend "some/path/and_livescript"
+
+    # leave off the top-level function wrapper
+    #depend "vendor/Audiolet" bare
     
-In JavaScript, the `//import` directive is used instead of `#import`.  
+    # some code using the files here.
+
+In JavaScript, the `//depend` directive is used instead of `#depend`.
 
 Be sure to install the languages you wish to use with `npm install -g`.
 
 ## Features
 
 * File extensions are automatically resolved, and in fact are not allowed in
-  import statements. This goes for the input_file too.
+  depend statements. This goes for the input_file too.
 * Files will only be included once in the resulting code, regardless of how
-  many times a file is imported.
+  many times a file is depended upon.
 * Compiling CoffeeScript, JavaScript, Coco, and LiveScript source files are
   included out of the box.  You can add more to the `compile.extensions`
   object.
@@ -42,7 +44,6 @@ Usage: jspackage input_file output_file [options]
 
 Available options:
   -h, --help       shows this help section
-  -b, --bare       compile without a top-level function wrapper
   -w, --watch      watch source files and recompile when any change
   -l, --lib PATH   add an additional search directory for source files
 ```
@@ -82,7 +83,7 @@ object:
 {extensions} = require 'jspackage'
 extensions['.lua'] =
   compile: (code) -> lua.compile(code)
-  import_re: /^--import (".+")$/gm
+  depend_re: /^--depend (".+")$/gm
 ```
 
 ## Developing jspackage

@@ -1,4 +1,4 @@
-//import "one"
+//depend "one"
 
 console.log("main module")
 One();

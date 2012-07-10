@@ -1,4 +1,4 @@
-#import "alsfile"
+#depend "alsfile"
 
 blarg = []
 foo = (x) ->

@@ -1,3 +1,3 @@
-//import "robin"
+//depend "robin"
 
 console.log("./thing");

@@ -1,4 +1,4 @@
-#import "thing"
+#depend "thing"
 
 
 console.log "main"

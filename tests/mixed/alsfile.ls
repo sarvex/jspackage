@@ -1,4 +1,4 @@
-#import "ajsfile"
+#depend "ajsfile"
 
 downcase = -> it.=toLowerCase!
 

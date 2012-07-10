@@ -32,15 +32,15 @@ parseFile = (full_path, cb) ->
         timestamp = (new Date()).toLocaleTimeString()
         console.info "#{timestamp} - compiled #{file.path}"
       # get the list of dependencies
-      re = parser.import_re
+      re = parser.depend_re
       re.lastIndex = 0
       while result = re.exec(source)
-        import_string = result[1].slice(1, -1)
-        file.deps.push import_string
+        depend_string = result[1].slice(1, -1)
+        file.deps.push depend_string
       cb null, file
 
 
-resolveImport = (cwd, import_string, doneResolvingImport) ->
+resolveDepend = (cwd, depend_string, doneResolvingDepend) ->
   # try each of the supported extensions
   try_exts = Object.keys(extensions)
   # try each of the libs, but stop upon first success
@@ -48,7 +48,7 @@ resolveImport = (cwd, import_string, doneResolvingImport) ->
   tryNextLib = ->
     if (try_lib = libs[lib_index++])?
       resolveWithExt = (ext, cb) ->
-        resolved_path = path.resolve(cwd, try_lib, import_string + ext)
+        resolved_path = path.resolve(cwd, try_lib, depend_string + ext)
         fs.realpath resolved_path, (err, real_path) ->
           if err
             cb null, null
@@ -61,21 +61,21 @@ resolveImport = (cwd, import_string, doneResolvingImport) ->
       async.map try_exts, resolveWithExt, (err, results) ->
         async.filter results, ((item, cb) -> cb(item?)), (results) ->
           if results.length is 1
-            doneResolvingImport null, results[0]
+            doneResolvingDepend null, results[0]
           else if results.length is 0
             tryNextLib()
           else if results.length > 1
-            doneResolvingImport("ambiguous import: #{import_string}")
+            doneResolvingDepend("ambiguous dependency: #{depend_string}")
           return
     else
-      doneResolvingImport("unable to resolve import: #{import_string}")
+      doneResolvingDepend("unable to resolve dependency: #{depend_string}")
   tryNextLib()
   
 resolveDependencyChain = (root, doneResolvingDependencyChain) ->
   deps = []
   seen = {}
   processNode = (node, doneProcessingNode) ->
-    resolveFromDep = (dep, cb) -> resolveImport(path.dirname(node.path), dep, cb)
+    resolveFromDep = (dep, cb) -> resolveDepend(path.dirname(node.path), dep, cb)
     async.map node.deps, resolveFromDep, (err, resolved_deps) ->
       if err
         doneResolvingDependencyChain err
@@ -96,8 +96,8 @@ resolveDependencyChain = (root, doneResolvingDependencyChain) ->
   processNode root, ->
     doneResolvingDependencyChain null, deps
 
-collectDependencies = (cwd, import_string, doneCollectingDependencies) ->
-  resolveImport cwd, import_string, (err, canonical_path) ->
+collectDependencies = (cwd, depend_string, doneCollectingDependencies) ->
+  resolveDepend cwd, depend_string, (err, canonical_path) ->
     if err
       doneCollectingDependencies(err)
       return
@@ -183,7 +183,7 @@ compile = (_options, cb) ->
 extensions =
   '.coffee':
     compile: (code) -> require('coffee-script').compile code, bare: options.bare
-    import_re: /^#import (".+")$/gm
+    depend_re: /^#depend (".+")$/gm
 
   '.js':
     compile: (code) ->
@@ -191,14 +191,14 @@ extensions =
         code
       else
         "(function(){\n#{code}}).call(this);"
-    import_re: /^\/\/import (".+");?$/gm
+    depend_re: /^\/\/depend (".+");?$/gm
 
   '.co':
     compile: (code) -> require('coco').compile code, bare: options.bare
-    import_re: /^#import (".+")$/gm
+    depend_re: /^#depend (".+")$/gm
 
   '.ls':
     compile: (code) -> require('LiveScript').compile code, bare: options.bare
-    import_re: /^#import (".+")$/gm
+    depend_re: /^#depend (".+")$/gm
 
 module.exports = {compile, extensions}

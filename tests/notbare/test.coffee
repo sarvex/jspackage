@@ -1,4 +1,4 @@
-#import "a"
+#depend "a"
 
 console.log A
 console.log B
