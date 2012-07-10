@@ -39,10 +39,11 @@ parseFile = (resolved_dep, cb) ->
       re = parser.depend_re
       re.lastIndex = 0
       while result = re.exec(source)
-        depend = result[1]
-        options = {bare: result[2]?}
-        seen = resolved_dep.seen.concat(file.path)
-        file.deps.push {depend, options, cwd: file.cwd, seen}
+        file.deps.push
+          depend: result[1]
+          options: {bare: result[2]?}
+          cwd: file.cwd
+          seen: resolved_dep.seen.concat(file.path)
       cb null, file
 
 

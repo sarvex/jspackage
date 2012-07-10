@@ -32,7 +32,7 @@ parseFile = function(resolved_dep, cb) {
     }
     file.mtime = +stat.mtime;
     return fs.readFile(resolved_dep.path, 'utf8', function(err, source) {
-      var depend, options, parser, re, result, seen, timestamp;
+      var parser, re, result, timestamp;
       if (err) {
         cb(err);
         return;
@@ -51,16 +51,13 @@ parseFile = function(resolved_dep, cb) {
       re = parser.depend_re;
       re.lastIndex = 0;
       while (result = re.exec(source)) {
-        depend = result[1];
-        options = {
-          bare: result[2] != null
-        };
-        seen = resolved_dep.seen.concat(file.path);
         file.deps.push({
-          depend: depend,
-          options: options,
+          depend: result[1],
+          options: {
+            bare: result[2] != null
+          },
           cwd: file.cwd,
-          seen: seen
+          seen: resolved_dep.seen.concat(file.path)
         });
       }
       return cb(null, file);
