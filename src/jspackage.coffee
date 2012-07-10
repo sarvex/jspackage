@@ -12,6 +12,7 @@ parseFile = (resolved_dep, cb) ->
     compiled_js: null
     mtime: null
     deps: []
+    cwd: path.dirname(resolved_dep.path)
   fs.stat resolved_dep.path, (err, stat) ->
     if err
       cb err
@@ -36,11 +37,11 @@ parseFile = (resolved_dep, cb) ->
       while result = re.exec(source)
         depend = result[1]
         options = {bare: result[2]?}
-        file.deps.push {depend, options}
+        file.deps.push {depend, options, cwd: file.cwd}
       cb null, file
 
 
-resolveDepend = (cwd, dep, doneResolvingDepend) ->
+resolveDepend = (dep, doneResolvingDepend) ->
   # try each of the supported extensions
   try_exts = Object.keys(extensions)
   # try each of the libs, but stop upon first success
@@ -48,7 +49,7 @@ resolveDepend = (cwd, dep, doneResolvingDepend) ->
   tryNextLib = ->
     if (try_lib = libs[lib_index++])?
       resolveWithExt = (ext, cb) ->
-        resolved_path = path.resolve(cwd, try_lib, dep.depend + ext)
+        resolved_path = path.resolve(dep.cwd, try_lib, dep.depend + ext)
         fs.realpath resolved_path, (err, real_path) ->
           if err
             cb null, null
@@ -75,9 +76,7 @@ resolveDependencyChain = (root, doneResolvingDependencyChain) ->
   files = []
   seen = {}
   processNode = (node, doneProcessingNode) ->
-    resolveFromDep = (dep, cb) ->
-      resolveDepend(path.dirname(node.path), dep, cb)
-    async.map node.deps, resolveFromDep, (err, resolved_deps) ->
+    async.map node.deps, resolveDepend, (err, resolved_deps) ->
       if err
         doneResolvingDependencyChain err
         return
@@ -97,8 +96,8 @@ resolveDependencyChain = (root, doneResolvingDependencyChain) ->
   processNode root, ->
     doneResolvingDependencyChain null, files
 
-collectDependencies = (cwd, dep, doneCollectingDependencies) ->
-  resolveDepend cwd, dep, (err, resolved_dep) ->
+collectDependencies = (dep, doneCollectingDependencies) ->
+  resolveDepend dep, (err, resolved_dep) ->
     if err
       doneCollectingDependencies(err)
       return
@@ -117,9 +116,7 @@ collectDependencies = (cwd, dep, doneCollectingDependencies) ->
         return
 
     callNext = (file) ->
-      collectFromFile = (dep, cb) ->
-        collectDependencies(path.dirname(file.path), dep, cb)
-      async.map file.deps, collectFromFile, doneCollectingDependencies
+      async.map file.deps, collectDependencies, doneCollectingDependencies
 
     if (cached_file = cached_files[resolved_dep.path])?
       fs.stat resolved_dep.path, (err, stat) ->
@@ -168,7 +165,8 @@ compile = (_options, cb) ->
     depend: options.mainfile
     options:
       bare: options.bare
-  collectDependencies process.cwd(), dep, (collect_err) ->
+    cwd: process.cwd()
+  collectDependencies dep, (collect_err) ->
     if collect_err and not root?
       cb(collect_err)
       return

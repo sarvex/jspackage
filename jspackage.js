@@ -19,7 +19,8 @@ parseFile = function(resolved_dep, cb) {
     path: resolved_dep.path,
     compiled_js: null,
     mtime: null,
-    deps: []
+    deps: [],
+    cwd: path.dirname(resolved_dep.path)
   };
   return fs.stat(resolved_dep.path, function(err, stat) {
     if (err) {
@@ -53,7 +54,8 @@ parseFile = function(resolved_dep, cb) {
         };
         file.deps.push({
           depend: depend,
-          options: options
+          options: options,
+          cwd: file.cwd
         });
       }
       return cb(null, file);
@@ -61,7 +63,7 @@ parseFile = function(resolved_dep, cb) {
   });
 };
 
-resolveDepend = function(cwd, dep, doneResolvingDepend) {
+resolveDepend = function(dep, doneResolvingDepend) {
   var lib_index, tryNextLib, try_exts;
   try_exts = Object.keys(extensions);
   lib_index = 0;
@@ -70,7 +72,7 @@ resolveDepend = function(cwd, dep, doneResolvingDepend) {
     if ((try_lib = libs[lib_index++]) != null) {
       resolveWithExt = function(ext, cb) {
         var resolved_path;
-        resolved_path = path.resolve(cwd, try_lib, dep.depend + ext);
+        resolved_path = path.resolve(dep.cwd, try_lib, dep.depend + ext);
         return fs.realpath(resolved_path, function(err, real_path) {
           if (err) {
             cb(null, null);
@@ -113,11 +115,7 @@ resolveDependencyChain = function(root, doneResolvingDependencyChain) {
   files = [];
   seen = {};
   processNode = function(node, doneProcessingNode) {
-    var resolveFromDep;
-    resolveFromDep = function(dep, cb) {
-      return resolveDepend(path.dirname(node.path), dep, cb);
-    };
-    return async.map(node.deps, resolveFromDep, function(err, resolved_deps) {
+    return async.map(node.deps, resolveDepend, function(err, resolved_deps) {
       var dep, file, funcs, _i, _len;
       if (err) {
         doneResolvingDependencyChain(err);
@@ -148,8 +146,8 @@ resolveDependencyChain = function(root, doneResolvingDependencyChain) {
   });
 };
 
-collectDependencies = function(cwd, dep, doneCollectingDependencies) {
-  return resolveDepend(cwd, dep, function(err, resolved_dep) {
+collectDependencies = function(dep, doneCollectingDependencies) {
+  return resolveDepend(dep, function(err, resolved_dep) {
     var cached_file, callNext, parseAndHandleErr;
     if (err) {
       doneCollectingDependencies(err);
@@ -171,11 +169,7 @@ collectDependencies = function(cwd, dep, doneCollectingDependencies) {
       });
     };
     callNext = function(file) {
-      var collectFromFile;
-      collectFromFile = function(dep, cb) {
-        return collectDependencies(path.dirname(file.path), dep, cb);
-      };
-      return async.map(file.deps, collectFromFile, doneCollectingDependencies);
+      return async.map(file.deps, collectDependencies, doneCollectingDependencies);
     };
     if ((cached_file = cached_files[resolved_dep.path]) != null) {
       return fs.stat(resolved_dep.path, function(err, stat) {
@@ -257,9 +251,10 @@ compile = function(_options, cb) {
     depend: options.mainfile,
     options: {
       bare: options.bare
-    }
+    },
+    cwd: process.cwd()
   };
-  return collectDependencies(process.cwd(), dep, function(collect_err) {
+  return collectDependencies(dep, function(collect_err) {
     if (collect_err && !(root != null)) {
       cb(collect_err);
       return;
