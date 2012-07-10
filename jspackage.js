@@ -121,7 +121,7 @@ resolveDependencyChain = function(root, doneResolvingDependencyChain) {
     return async.map(node.deps, resolveDepend, function(err, resolved_deps) {
       var dep, file, funcs, _i, _len;
       if (err) {
-        doneResolvingDependencyChain(err);
+        doneProcessingNode(err);
         return;
       }
       funcs = [];
@@ -135,17 +135,17 @@ resolveDependencyChain = function(root, doneResolvingDependencyChain) {
         funcs.push(async.apply(processNode, file));
       }
       return async.parallel(funcs, function(err, results) {
+        files.push(node);
         if (err) {
-          doneResolvingDependencyChain(err);
+          doneProcessingNode(err);
           return;
         }
-        files.push(node);
-        return doneProcessingNode();
+        return doneProcessingNode(null);
       });
     });
   };
-  return processNode(root, function() {
-    return doneResolvingDependencyChain(null, files);
+  return processNode(root, function(err) {
+    return doneResolvingDependencyChain(err, files);
   });
 };
 

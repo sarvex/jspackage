@@ -87,7 +87,7 @@ resolveDependencyChain = (root, doneResolvingDependencyChain) ->
   processNode = (node, doneProcessingNode) ->
     async.map node.deps, resolveDepend, (err, resolved_deps) ->
       if err
-        doneResolvingDependencyChain err
+        doneProcessingNode(err)
         return
       funcs = []
       for dep in resolved_deps
@@ -97,13 +97,13 @@ resolveDependencyChain = (root, doneResolvingDependencyChain) ->
         seen[file.path] = true
         funcs.push async.apply(processNode, file)
       async.parallel funcs, (err, results) ->
-        if err
-          doneResolvingDependencyChain err
-          return
         files.push node
-        doneProcessingNode()
-  processNode root, ->
-    doneResolvingDependencyChain null, files
+        if err
+          doneProcessingNode(err)
+          return
+        doneProcessingNode(null)
+  processNode root, (err) ->
+    doneResolvingDependencyChain err, files
 
 collectDependencies = (dep, doneCollectingDependencies) ->
   resolveDepend dep, (err, resolved_dep) ->

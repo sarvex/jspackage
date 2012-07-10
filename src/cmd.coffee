@@ -52,7 +52,7 @@ compile options, (err, code) ->
   if options.watch
     timestamp = (new Date()).toLocaleTimeString()
     if err
-      console.error("#{timestamp}  - error: #{err}")
+      console.error("#{timestamp} - error: #{err}")
     else
       console.info("#{timestamp} - generated #{output}")
       fs.writeFile(output, code)
