@@ -19,6 +19,20 @@ In JavaScript, the `//depend` directive is used instead of `#depend`.
 
 Be sure to install the languages you wish to use with `npm install -g`.
 
+## Command line usage
+
+When installed with `npm install jspackage -g`, a command line tool called
+`jspackage` will be made available.
+
+```
+Usage: jspackage input_file output_file [options]
+
+Available options:
+  -h, --help       shows this help section
+  -w, --watch      watch source files and recompile when any change
+  -l, --lib PATH   add an additional search directory for source files
+```
+
 ## Features
 
 * File extensions are automatically resolved, and in fact are not allowed in
@@ -34,20 +48,6 @@ Be sure to install the languages you wish to use with `npm install -g`.
   they change.
 * Ability to supply more source code search paths with `--lib`.
   
-## Command line usage
-
-When installed with `npm install jspackage -g`, a command line tool called
-`jspackage` will be made available.
-
-```
-Usage: jspackage input_file output_file [options]
-
-Available options:
-  -h, --help       shows this help section
-  -w, --watch      watch source files and recompile when any change
-  -l, --lib PATH   add an additional search directory for source files
-```
-
 ## Server example
 
 ```coffee
@@ -88,9 +88,13 @@ extensions['.lua'] =
 
 ## Developing jspackage
 
-To compile and watch:
+To build:
 
-    coffee -wbco . src/
+    npm run_script build
+
+To build and watch:
+
+    npm run_script watch
 
 To run the tests:
 

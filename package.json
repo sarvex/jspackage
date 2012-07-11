@@ -22,7 +22,9 @@
       "temp": "~0.4.0"
   },
   "scripts": {
-      "test": "node test.js"
+      "test": "node test.js",
+      "build": "coffee -bco . src/",
+      "watch": "coffee -wbco . src/"
   },
   "engines": {
       "node": ">=0.6.8 <0.9.0"
