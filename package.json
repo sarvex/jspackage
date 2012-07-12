@@ -23,8 +23,8 @@
   },
   "scripts": {
       "test": "node lib/test.js",
-      "build": "coffee -bco lib/ src/",
-      "watch": "coffee -wbco lib/ src/",
+      "build": "coco -bco lib/ src/",
+      "watch": "coco -wbco lib/ src/",
       "clean": "rm -rf lib/"
   },
   "engines": {
