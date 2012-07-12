@@ -162,7 +162,7 @@ const watchFiles = !(files, cb) ->
       watcher = watchFileFallback(file, doCallback)
     watchers.push watcher
 
-export compile = !(options, cb) ->
+export const compile = !(options, cb) ->
   watching := options.watch
 
   libs := options.libs ? []
@@ -192,7 +192,7 @@ export compile = !(options, cb) ->
         const output = (dep.compiled_js for dep of dependency_chain).join("\n")
         cb(null, output)
 
-export extensions =
+export const extensions =
   '.coffee':
     compile: (code, options) ->
       require('coffee-script').compile code, bare: options.bare
