@@ -4,7 +4,8 @@ const path = require('path')
 const optparse = require('optparse')
 
 const switches =
-  * '-h' '--help'     "shows this help section"
+  * '-h' '--help'     "shows this help section and exit"
+  * '-v' '--version'  "print the version number and exit"
   * '-b' '--bare'     "compile without a top-level function wrapper"
   * '-w' '--watch'    "watch source files and recompile when any change"
   * '-l' '--lib PATH' "add an additional search directory for source files"
@@ -17,6 +18,14 @@ printUsage = !->
 
 parser.on \help, !->
   printUsage!
+  process.exit(1)
+
+parser.on \version, !->
+  lib_dir = path.dirname(fs.realpathSync(__filename))
+  pkg_path = path.resolve(lib_dir, "..", "package.json")
+  data = fs.readFileSync(pkg_path, 'utf8')
+  pkg = JSON.parse(data)
+  console.log(pkg.version)
   process.exit(1)
 
 mainfile = null
