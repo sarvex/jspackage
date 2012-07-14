@@ -195,7 +195,7 @@ export const compile = !(options, cb) ->
 export const extensions =
   '.coffee':
     compile: (code, options) ->
-      require('coffee-script').compile code, bare: options.bare
+      require('coffee-script').compile code, {options.bare}
     depend_re: /^#depend "(.+)"( bare)?$/gm
 
   '.js':
@@ -208,11 +208,11 @@ export const extensions =
 
   '.co':
     compile: (code, options) ->
-      require('coco').compile code, bare: options.bare
+      require('coco').compile code, {options.bare}
     depend_re: /^#depend "(.+)"( bare)?$/gm
 
   '.ls':
     compile: (code, options) ->
-      require('LiveScript').compile code, bare: options.bare
+      require('LiveScript').compile code, {options.bare}
     depend_re: /^#depend "(.+)"( bare)?$/gm
 
