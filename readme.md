@@ -90,11 +90,11 @@ extensions['.lua'] =
 
 To build:
 
-    npm run_script build
+    npm run-script build
 
 To build and watch:
 
-    npm run_script watch
+    npm run-script watch
 
 To run the tests:
 
