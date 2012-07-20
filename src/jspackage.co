@@ -1,6 +1,8 @@
-const fs = require('fs')
-const path = require('path')
-const async = require('async')
+const
+  fs = require('fs')
+  path = require('path')
+  async = require('async')
+  watchFilesOnce = require('./watch')
 
 # persisted between calls to compile
 const cached_files = {}
@@ -17,42 +19,42 @@ const parseFile = !(resolved_dep, cb) ->
     mtime: null
     deps: []
     cwd: path.dirname(resolved_dep.path)
-  fs.stat resolved_dep.path, !(err, stat) ->
-    if err
-      cb err
-      return
-    file.mtime = +stat.mtime
-    fs.readFile resolved_dep.path, \utf8, !(err, source) ->
-      if err
-        cb err
-        return
-      const parser = extensions[path.extname(resolved_dep.path)]
-      try
-        file.compiled_js = parser.compile(source, resolved_dep.options)
-      catch err
-        cb "#{resolved_dep.path}\n#err", file
-        return
-      if watching
-        const timestamp = (new Date()).toLocaleTimeString()
-        console.info "#timestamp - compiled #{file.path}"
-      # get the list of dependencies
-      const re = parser.depend_re
-      re.lastIndex = 0
-      while result = re.exec(source)
-        file.deps.push do
-          depend: result[1]
-          options:
-            bare: result[2]?
-          cwd: file.cwd
-          seen: resolved_dep.seen.concat(file.path)
-      cb null, file
+  (err, stat) <-! fs.stat(resolved_dep.path)
+  if err
+    cb(err)
+    return
+  file.mtime = +stat.mtime
+  (err, source) <-! fs.readFile(resolved_dep.path, \utf8)
+  if err
+    cb(err)
+    return
+  const parser = extensions[path.extname(resolved_dep.path)]
+  try
+    file.compiled_js = parser.compile(source, resolved_dep.options)
+  catch err
+    cb("#{resolved_dep.path}\n#err", file)
+    return
+  if watching
+    const timestamp = (new Date()).toLocaleTimeString()
+    console.info "#timestamp - compiled #{file.path}"
+  # get the list of dependencies
+  const re = parser.depend_re
+  re.lastIndex = 0
+  while result = re.exec(source)
+    file.deps.push do
+      depend: result[1]
+      options:
+        bare: result[2]?
+      cwd: file.cwd
+      seen: resolved_dep.seen.concat(file.path)
+  cb(null, file)
 
 const resolveDepend = !(dep, doneResolvingDepend) ->
   # try each of the supported extensions
   const try_exts = Object.keys(extensions)
   # try each of the libs, but stop upon first success
   lib_index = 0
-  const tryNextLib = !->
+  do tryNextLib = !->
     if (try_lib = libs[lib_index++])?
       const resolveWithExt = !(ext, cb) ->
         resolved_path = path.resolve(dep.cwd, try_lib, dep.depend + ext)
@@ -65,102 +67,78 @@ const resolveDepend = !(dep, doneResolvingDepend) ->
               cb null, null
             else
               cb null, real_path
-      async.map try_exts, resolveWithExt, !(err, results) ->
-        async.filter results, ((item, cb) -> cb(item?)), !(results) ->
-          if results.length is 1
-            doneResolvingDepend null,
-              path: results[0]
-              options: dep.options
-              seen: dep.seen
-          else if results.length is 0
-            tryNextLib!
-          else if results.length > 1
-            doneResolvingDepend("ambiguous dependency: #{dep.depend}")
+      (err, results) <-! async.map(try_exts, resolveWithExt)
+      (results) <-! async.filter(results, ((item, cb) -> cb(item?)))
+      if results.length is 1
+        doneResolvingDepend null,
+          path: results[0]
+          options: dep.options
+          seen: dep.seen
+      else if results.length is 0
+        tryNextLib!
+      else if results.length > 1
+        doneResolvingDepend("ambiguous dependency: #{dep.depend}")
     else
       doneResolvingDepend("unable to resolve dependency: #{dep.depend}")
-  tryNextLib!
 
 const resolveDependencyChain = !(root, doneResolvingDependencyChain) ->
   const files = []
   const seen = {}
   const processNode = !(node, doneProcessingNode) ->
-    async.map node.deps, resolveDepend, (err, resolved_deps) ->
-      if err
-        doneProcessingNode(err)
-        return
-      const funcs = []
-      for dep of resolved_deps
-        const file = cached_files[dep.path]
-        if seen[file.path]?
-          continue
-        seen[file.path] = true
-        funcs.push async.apply(processNode, file)
-      async.parallel funcs, !(err, results) ->
-        files.push node
-        if err
-          doneProcessingNode(err)
-          return
-        doneProcessingNode(null)
-  processNode root, !(err) ->
-    doneResolvingDependencyChain err, files
+    (err, resolved_deps) <-! async.map(node.deps, resolveDepend)
+    if err
+      doneProcessingNode(err)
+      return
+    const funcs = []
+    for dep of resolved_deps
+      const file = cached_files[dep.path]
+      if seen[file.path]?
+        continue
+      seen[file.path] = true
+      funcs.push async.apply(processNode, file)
+    (err, results) <-! async.parallel(funcs)
+    files.push node
+    if err
+      doneProcessingNode(err)
+      return
+    doneProcessingNode(null)
+  (err) <-! processNode(root)
+  doneResolvingDependencyChain(err, files)
 
 const collectDependencies = !(dep, doneCollectingDependencies) ->
-  resolveDepend dep, !(err, resolved_dep) ->
+  (err, resolved_dep) <-! resolveDepend(dep)
+  if err
+    doneCollectingDependencies(err)
+    return
+
+  if resolved_dep.path of dep.seen
+    const dep_chain = dep.seen.concat(resolved_dep.path).join(" depends on\n")
+    doneCollectingDependencies("circular dependency:\n#dep_chain")
+    return
+
+  const parseAndHandleErr = !(cb) ->
+    (err, file) <-! parseFile(resolved_dep)
+    if file
+      cached_files[file.path] = file
+      root ?:= file
+
     if err
       doneCollectingDependencies(err)
-      return
-
-    if resolved_dep.path of dep.seen
-      const dep_chain = dep.seen.concat(resolved_dep.path).join(" depends on\n")
-      doneCollectingDependencies "circular dependency:\n#dep_chain"
-      return
-
-    const parseAndHandleErr = !(cb) ->
-      parseFile resolved_dep, !(err, file) ->
-        if file
-          cached_files[file.path] = file
-          root ?:= file
-
-        if err
-          doneCollectingDependencies(err)
-        else
-          cb(file)
-
-    const callNext = !(file) ->
-      async.map file.deps, collectDependencies, doneCollectingDependencies
-
-    if (cached_file = cached_files[resolved_dep.path])?
-      fs.stat resolved_dep.path, !(err, stat) ->
-        if cached_file.mtime is +stat.mtime
-          root ?:= cached_file
-          callNext cached_file
-        else
-          parseAndHandleErr callNext
     else
-      parseAndHandleErr callNext
+      cb(file)
 
-# emulates fs.watch
-const watchFileFallback = (filename, options, cb) ->
-  options.interval = 701
-  fs.watchFile filename, options, !(curr, prev) ->
-    if curr.mtime is not prev.mtime
-      cb \change, filename
-  return {close: -> fs.unwatchFile(filename)}
+  const callNext = !(file) ->
+    async.map file.deps, collectDependencies, doneCollectingDependencies
 
-const watchFile = fs.watch or watchFileFallback
-
-const watchFiles = !(files, cb) ->
-  const watchers = []
-  const doCallback = !(event) ->
-    if event is "change"
-      watcher.close! for watcher of watchers
-      cb!
-  for file of files
-    try
-      watcher = fs.watch(file, doCallback)
-    catch err
-      watcher = watchFileFallback(file, doCallback)
-    watchers.push watcher
+  if (cached_file = cached_files[resolved_dep.path])?
+    (err, stat) <-! fs.stat(resolved_dep.path)
+    if cached_file.mtime is +stat.mtime
+      root ?:= cached_file
+      callNext(cached_file)
+    else
+      parseAndHandleErr(callNext)
+  else
+    parseAndHandleErr(callNext)
 
 export const compile = !(options, cb) ->
   watching := options.watch
@@ -176,21 +154,21 @@ export const compile = !(options, cb) ->
       bare: options.bare
     cwd: process.cwd()
     seen: []
-  collectDependencies dep, !(collect_err) ->
-    if collect_err and not root?
-      cb(collect_err)
-      return
-    resolveDependencyChain root, !(err, dependency_chain) ->
-      if watching
-        watchFiles (dep.path for dep of dependency_chain), !->
-          compile options, cb
-      if err
-        cb(err)
-      else if collect_err
-        cb(collect_err)
-      else
-        const output = (dep.compiled_js for dep of dependency_chain).join("\n")
-        cb(null, output)
+  (collect_err) <-! collectDependencies(dep)
+  if collect_err and not root?
+    cb(collect_err)
+    return
+  (err, dependency_chain) <-! resolveDependencyChain(root)
+  if watching
+    watchFilesOnce (dep.path for dep of dependency_chain), !->
+      compile options, cb
+  if err
+    cb(err)
+  else if collect_err
+    cb(collect_err)
+  else
+    const output = (dep.compiled_js for dep of dependency_chain).join("\n")
+    cb(null, output)
 
 export const extensions =
   '.coffee':
