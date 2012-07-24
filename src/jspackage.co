@@ -160,7 +160,7 @@ export const compile = !(options, cb) ->
     return
   (err, dependency_chain) <-! resolveDependencyChain(root)
   if watching
-    watchFilesOnce (dep.path for dep of dependency_chain), !->
+    const closer = watchFilesOnce (dep.path for dep of dependency_chain), !->
       compile options, cb
   if err
     cb(err)
@@ -168,7 +168,7 @@ export const compile = !(options, cb) ->
     cb(collect_err)
   else
     const output = (dep.compiled_js for dep of dependency_chain).join("\n")
-    cb(null, output)
+    cb(null, output, closer)
 
 export const extensions =
   '.coffee':
