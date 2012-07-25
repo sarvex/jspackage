@@ -82,7 +82,9 @@ object:
 ```coffee
 {extensions} = require 'jspackage'
 extensions['.lua'] =
-  compile: (code, options) -> lua.compile(code, bare: options.bare)
+  require: 'npm-lua-package'
+  compile: (code, options) ->
+    require('npm-lua-package').compile(code, bare: options.bare)
   depend_re: /^--depend "(.+)"( bare)?$/gm
 ```
 
