@@ -198,3 +198,8 @@ export const extensions =
       require('LiveScript').compile code, {options.bare}
     depend_re: /^#depend "(.+)"( bare)?$/gm
 
+  '.iced':
+    require: 'iced-coffee-script'
+    compile: (code, options) ->
+      require('iced-coffee-script').compile code, {options.bare}
+    depend_re: /^#depend "(.+)"( bare)?$/gm
