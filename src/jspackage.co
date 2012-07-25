@@ -2,7 +2,7 @@ const
   fs = require('fs')
   path = require('path')
   async = require('async')
-  watchFilesOnce = require('./watch')
+  {watchFilesOnce} = require('./watch')
 
 # persisted between calls to compile
 const cached_files = {}

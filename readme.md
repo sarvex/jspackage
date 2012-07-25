@@ -39,9 +39,9 @@ Available options:
   depend statements. This goes for the input_file too.
 * Files will only be included once in the resulting code, regardless of how
   many times a file is depended upon.
-* Compiling CoffeeScript, JavaScript, Coco, and LiveScript source files are
-  included out of the box.  You can add more to the `compile.extensions`
-  object.
+* Compiling CoffeeScript, JavaScript, Coco, LiveScript, and Iced CoffeeScript
+  source files are included out of the box.  You can add more to the 
+  `compile.extensions` object.
   - Or add support to the bottom of `src/jspackage.coffee` and submit a pull
     request.
 * Includes a `--watch` mode which automatically recompiles source files when
@@ -72,6 +72,7 @@ server.listen(8080)
  * Coffee-Script
  * LiveScript
  * Coco
+ * Iced-Coffee-Script
 
 To add out-of-the-box support for another language, add it to the bottom of
 `src/jspackage.coffee` and submit a pull request.
