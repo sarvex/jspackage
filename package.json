@@ -1,7 +1,7 @@
 {
   "name": "jspackage",
   "description": "build tool which adds client-side import syntax",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "author": {
     "name": "Andrew Kelley",
     "email": "superjoe30@gmail.com"
