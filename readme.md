@@ -91,13 +91,9 @@ extensions['.lua'] =
 
 ## Developing jspackage
 
-To build:
-
-    npm run-script build
-
 To build and watch:
 
-    npm run-script watch
+    npm run dev
 
 To run the tests:
 

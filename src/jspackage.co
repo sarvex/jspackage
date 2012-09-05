@@ -140,7 +140,7 @@ const collectDependencies = !(dep, doneCollectingDependencies) ->
   else
     parseAndHandleErr(callNext)
 
-export const compile = !(options, cb) ->
+export !function compile (options, cb)
   watching := options.watch
 
   libs := options.libs ? []
@@ -170,7 +170,7 @@ export const compile = !(options, cb) ->
     const output = (dep.compiled_js for dep of dependency_chain).join("\n")
     cb(null, output, closer)
 
-export const extensions =
+export extensions =
   '.coffee':
     require: 'coffee-script'
     compile: (code, options) ->
