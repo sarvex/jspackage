@@ -1,7 +1,7 @@
 fs = require('fs')
 
 # emulates fs.watch
-const watchFileFallback = (filename, options, cb) ->
+function watchFileFallback (filename, options, cb)
   options.interval = 701
   fs.watchFile filename, options, !(curr, prev) ->
     if curr.mtime is not prev.mtime
@@ -12,7 +12,7 @@ const watchFile = fs.watch or watchFileFallback
 
 # when any one of these files change, call callback
 # and stop watching
-export const watchFilesOnce = (files, cb) ->
+export function watchFilesOnce (files, cb)
   watchers = []
   const close = !->
     watcher.close! for watcher of watchers
