@@ -28,6 +28,9 @@ const parseFile = !(resolved_dep, cb) ->
   if err
     cb(err)
     return
+  # remove byte order mark from source
+  if source.charCodeAt(0) is 65279
+    source = source.substring(1)
   const parser = extensions[path.extname(resolved_dep.path)]
   try
     file.compiled_js = parser.compile(source, resolved_dep.options)
