@@ -1,5 +1,4 @@
-Bundle client side code with inline dependency declaration syntax
-=================================================================
+# Bundle client side code with inline dependency declaration syntax
 
 ## Synopsis
 
@@ -42,7 +41,7 @@ Available options:
 * Compiling CoffeeScript, JavaScript, Coco, LiveScript, and Iced CoffeeScript
   source files are included out of the box.  You can add more to the 
   `compile.extensions` object.
-  - Or add support to the bottom of `src/jspackage.coffee` and submit a pull
+  - Or add support to the bottom of `lib/jspackage.js` and submit a pull
     request.
 * Includes a `--watch` mode which automatically recompiles source files when
   they change.
@@ -75,7 +74,7 @@ server.listen(8080)
  * Iced-Coffee-Script
 
 To add out-of-the-box support for another language, add it to the bottom of
-`src/jspackage.coffee` and submit a pull request.
+`lib/jspackage.js` and submit a pull request.
 
 To add support by wrapping the code, add an entry to the `extensions`
 object:
@@ -88,17 +87,3 @@ extensions['.lua'] =
     require('npm-lua-package').compile(code, bare: options.bare)
   depend_re: /^--depend "(.+)"( bare)?$/gm
 ```
-
-## Developing jspackage
-
-To build and watch:
-
-    npm run dev
-
-To run the tests:
-
-    npm test
-    
-## License
-
-Licensed under the MIT license.

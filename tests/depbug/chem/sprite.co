@@ -1,0 +1,5 @@
+#depend "chem/vec2d"
+#depend "chem/helpers"
+#depend "chem/event_emitter"
+
+console.log("sprite")
