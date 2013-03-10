@@ -27,7 +27,7 @@
     "test": "node lib/test.js"
   },
   "bin": {
-    "jspackage": "./bin/jspackage"
+    "jspackage": "./lib/cmd.js"
   },
   "main": "./lib/jspackage.js",
   "license": "MIT"
