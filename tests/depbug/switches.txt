@@ -1,0 +1,2 @@
+--lib tests/depbug/
+--lib tests/depbug/shared/

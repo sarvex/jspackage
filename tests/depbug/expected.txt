@@ -1,4 +1,14 @@
-chem
 astar
+batch
+event_emitter
+sound
+vec2d
+button_offset
+button
+bootstrap
+engine
+helpers
+sprite
+chem
 grid
 main
