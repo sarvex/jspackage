@@ -1,4 +1,4 @@
-[![Build Status](https://secure.travis-ci.org/superjoe30/jspackage)](http://travis-ci.org/superjoe30/jspackage)
+[![Build Status](https://travis-ci.org/superjoe30/jspackage.png)](https://travis-ci.org/superjoe30/jspackage)
 
 # Bundle client side code with inline dependency declaration syntax
 
