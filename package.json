@@ -6,6 +6,9 @@
     "name": "Andrew Kelley",
     "email": "superjoe30@gmail.com"
   },
+  "engine": {
+    "node": ">=0.10.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/superjoe30/jspackage.git"
