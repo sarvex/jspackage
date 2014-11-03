@@ -11,9 +11,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/superjoe30/jspackage.git"
+    "url": "https://github.com/andrewrk/jspackage.git"
   },
-  "bugs": "http://github.com/superjoe30/jspackage/issues",
+  "bugs": "http://github.com/andrewrk/jspackage/issues",
   "dependencies": {
     "async": "~0.1.22",
     "optparse": "~1.0.3",

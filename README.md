@@ -1,6 +1,7 @@
-[![Build Status](https://travis-ci.org/superjoe30/jspackage.png)](https://travis-ci.org/superjoe30/jspackage)
-
 # Bundle client side code with inline dependency declaration syntax
+
+Do not use this. Use
+[browserify](https://github.com/substack/node-browserify) instead.
 
 ## Synopsis
 
